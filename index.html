@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Training Plan</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;padding:0;background:#0a0a0a;color:#f0f0f0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+  input[type=number]{-moz-appearance:textfield;}
+  select option{background:#141414;color:#f0f0f0;}
+  ::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const ORANGE = "#f97316";
+const GREEN  = "#4ade80";
+const PURPLE = "#a78bfa";
+const BG     = "#0a0a0a";
+const CARD   = "#141414";
+const CARD2  = "#1a1a1a";
+const BORDER = "#242424";
+const TEXT   = "#f0f0f0";
+const MUTED  = "#555";
+const MUTED2 = "#888";
+
+const DB_WEIGHTS = [1, 2.5, 3.5, 5, 6, 7.5, 8.5, 10, 11, 12.5, 13.5, 15, 16, 17.5, 18.5];
+
+const DAYS = [
+  {
+    id: 0, label: "D1", title: "UPPER PUSH", sub: "Chest · Shoulders · Triceps",
+    exercises: [
+      { name: "Flat DB Bench Press",      kit: "DB",   sets: 4, reps: "12", note: "Control the descent — 2 seconds down.", url: "https://www.youtube.com/results?search_query=dumbbell+bench+press+form" },
+      { name: "Incline DB Press",          kit: "DB",   sets: 3, reps: "12", note: "Bench at ~30–45°. Targets upper chest.", url: "https://www.youtube.com/results?search_query=incline+dumbbell+press+form" },
+      { name: "DB Flyes",                  kit: "DB",   sets: 3, reps: "15", note: "Wide arc, don't go too heavy. Squeeze at top.", url: "https://www.youtube.com/results?search_query=dumbbell+chest+flyes+form" },
+      { name: "Seated DB Shoulder Press",  kit: "DB",   sets: 3, reps: "12", note: "Sit upright on bench, core tight.", url: "https://www.youtube.com/results?search_query=seated+dumbbell+shoulder+press+form" },
+      { name: "Lateral Raise",             kit: "DB",   sets: 3, reps: "15", note: "Light weight only — start at 1–2.5kg. Raise to shoulder height, slight bend in elbow.", url: "https://www.youtube.com/results?search_query=dumbbell+lateral+raise+form" },
+      { name: "Tricep Overhead Extension", kit: "DB",   sets: 3, reps: "12", note: "Single dumbbell, both hands. Full stretch at bottom.", url: "https://www.youtube.com/results?search_query=dumbbell+overhead+tricep+extension+form" },
+    ]
+  },
+  {
+    id: 1, label: "D2", title: "LOWER BODY", sub: "Quads · Hamstrings · Glutes · Calves",
+    exercises: [
+      { name: "Goblet Squat",          kit: "DB",   sets: 4, reps: "15", note: "Hold DB vertically at chest. Elbows inside knees at bottom.", url: "https://www.youtube.com/results?search_query=goblet+squat+form+tutorial" },
+      { name: "Romanian Deadlift",     kit: "DB",   sets: 4, reps: "12", note: "Hinge at hips, push bum back. Weights trail down shins. Learn this well.", url: "https://www.youtube.com/results?search_query=dumbbell+romanian+deadlift+form+tutorial" },
+      { name: "Bulgarian Split Squat", kit: "DB",   sets: 3, reps: "10", note: "Rear foot on bench, front foot well forward. Drop straight down — don't let front knee cave in. Brutal but one of the best leg movements you can do.", url: "https://www.youtube.com/results?search_query=bulgarian+split+squat+dumbbell+form" },
+      { name: "Band Leg Extension",    kit: "Band", sets: 3, reps: "15", note: "Anchor band low behind you, loop around ankle. Sit on bench edge and extend lower leg. Isolates the quads directly.", url: "https://www.youtube.com/results?search_query=resistance+band+leg+extension+seated+tutorial" },
+      { name: "Hip Thrusts",           kit: "DB",   sets: 3, reps: "15", note: "Shoulders on bench, DB on hips. Squeeze glutes at top.", url: "https://www.youtube.com/results?search_query=dumbbell+hip+thrust+form+tutorial" },
+      { name: "Calf Raises",           kit: "DB",   sets: 4, reps: "20", note: "Stand on a step edge for full range. Hold DB for load.", url: "https://www.youtube.com/results?search_query=dumbbell+calf+raise+form+tutorial" },
+    ]
+  },
+  {
+    id: 2, label: "D3", title: "REST", sub: "Recovery · Mobility",
+    rest: true,
+    restTips: ["10,000+ steps still counts","Light stretching or yoga","Prioritise sleep & protein","Foam roll if legs are sore"]
+  },
+  {
+    id: 3, label: "D4", title: "UPPER PULL", sub: "Back · Biceps · Rear Delts",
+    exercises: [
+      { name: "Band Lat Pulldown",   kit: "Band", sets: 4, reps: "15", note: "Anchor high. Sit/kneel, pull to chest. Keep chest up.", url: "https://www.youtube.com/results?search_query=resistance+band+lat+pulldown+form" },
+      { name: "Single Arm DB Row",   kit: "DB",   sets: 4, reps: "12", note: "Knee on bench. Full range — let shoulder blade move.", url: "https://www.youtube.com/results?search_query=single+arm+dumbbell+row+form" },
+      { name: "Bent-Over DB Row",    kit: "DB",   sets: 3, reps: "12", note: "Hinge at hip, brace core hard. Dumbbells expose a weak brace.", url: "https://www.youtube.com/results?search_query=bent+over+dumbbell+row+form" },
+      { name: "Band Face Pulls",     kit: "Band", sets: 3, reps: "20", note: "Anchor at face height. Pull to forehead, elbows high.", url: "https://www.youtube.com/results?search_query=resistance+band+face+pull+form" },
+      { name: "Band Pull-Aparts",    kit: "Band", sets: 3, reps: "20", note: "Arms straight at chest height. Pull apart to sides.", url: "https://www.youtube.com/results?search_query=band+pull+apart+form+tutorial" },
+      { name: "DB Curl",             kit: "DB",   sets: 3, reps: "12", note: "Alternate arms. Slow on the way down.", url: "https://www.youtube.com/results?search_query=dumbbell+curl+form+tutorial" },
+      { name: "Incline DB Curl",     kit: "DB",   sets: 2, reps: "12", note: "Bench at ~45°. Stretches the bicep long head.", url: "https://www.youtube.com/results?search_query=incline+dumbbell+curl+form+tutorial" },
+    ]
+  },
+  {
+    id: 4, label: "D5", title: "CORE", sub: "Abs · Stability · Obliques",
+    exercises: [
+      { name: "Plank",               kit: "BW",   sets: 3, reps: "60s", timerSecs: 60, note: "Neutral spine. Don't let hips sag or pike.", url: "https://www.youtube.com/results?search_query=plank+proper+form+tutorial" },
+      { name: "Plank Shoulder Taps", kit: "BW",   sets: 3, reps: "10",  note: "Keep hips totally still. Anti-rotation stability.", url: "https://www.youtube.com/results?search_query=plank+shoulder+tap+tutorial" },
+      { name: "Reverse Crunches",    kit: "BW",   sets: 3, reps: "15",  note: "Lie flat, legs up at 90°. Curl hips off the floor toward your chest using your abs — not momentum. Lower slowly.", url: "https://www.youtube.com/results?search_query=reverse+crunch+proper+form+tutorial" },
+      { name: "Band Crunches",       kit: "Band", sets: 3, reps: "20",  note: "Anchor high. Hold at chest/shoulders. Crunch against resistance.", url: "https://www.youtube.com/results?search_query=resistance+band+crunch+tutorial" },
+      { name: "Bicycle Crunches",    kit: "BW",   sets: 3, reps: "20",  note: "Slow and controlled. Quality over speed.", url: "https://www.youtube.com/results?search_query=bicycle+crunch+proper+form" },
+      { name: "Hollow Body Hold",    kit: "BW",   sets: 3, reps: "30s", timerSecs: 30, note: "Arms overhead, lower back flat. Brutal but effective.", url: "https://www.youtube.com/results?search_query=hollow+body+hold+tutorial" },
+    ]
+  },
+  {
+    id: 5, label: "D6", title: "HIIT", sub: "Monday & Thursday · Never same day as legs",
+    hiit: true,
+    workSecs: 20,
+    restSecs: 60,
+    warmupSecs: 180,
+    cooldownSecs: 120,
+    totalRounds: 10,
+    hiitMoves: ["Mountain Climbers", "Squat Jumps"],
+  }
+];
+
+function getSets(k)      { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } }
+function saveSets(k,v)   { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+function getWeight(k)    { try { const v = localStorage.getItem(k); return v ? parseFloat(v) : null; } catch { return null; } }
+function saveWeight(k,v) { try { localStorage.setItem(k, String(v)); } catch {} }
+function getLog()        { try { return JSON.parse(localStorage.getItem("session_log") || "[]"); } catch { return []; } }
+function saveLog(v)      { try { localStorage.setItem("session_log", JSON.stringify(v)); } catch {} }
+function getOrder(dayId) { try { const v = localStorage.getItem(`order_d${dayId}`); return v ? JSON.parse(v) : null; } catch { return null; } }
+function saveOrder(dayId,v) { try { localStorage.setItem(`order_d${dayId}`, JSON.stringify(v)); } catch {} }
+function getReps(k)      { try { const v = localStorage.getItem(k); return v ? parseInt(v) : null; } catch { return null; } }
+function saveReps(k,v)   { try { localStorage.setItem(k, String(v)); } catch {} }
+const TODAY = new Date().toDateString();
+function clearDaySets(dayId, count) { for(let i=0;i<count;i++) saveSets(`d${dayId}_e${i}`,[]); try { localStorage.setItem(`lastopen_d${dayId}`, TODAY); } catch {} }
+function shouldAutoClear(dayId) { try { return localStorage.getItem(`lastopen_d${dayId}`) !== TODAY; } catch { return true; } }
+
+function KitBadge({ kit }) {
+  const color = kit === "Band" ? PURPLE : kit === "DB" ? ORANGE : MUTED2;
+  const label = kit === "Band" ? "RB" : kit === "DB" ? "DB" : "BW";
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+      color, border: `1px solid ${color}55`, borderRadius: 4,
+      padding: "2px 5px", flexShrink: 0, lineHeight: 1.4
+    }}>{label}</span>
+  );
+}
+
+function WeightSelector({ exKey }) {
+  const storageKey = `weight_${exKey}`;
+  const [weight, setWeight] = useState(() => getWeight(storageKey));
+  const dragRef    = useRef(null);
+  const containerRef = useRef(null);
+  const tapCount   = useRef(0);
+  const tapTimer2  = useRef(null);
+
+  const snap = (w) => DB_WEIGHTS.reduce((p,c) => Math.abs(c-w) < Math.abs(p-w) ? c : p);
+
+  const handleWeightTap = () => {
+    tapCount.current += 1;
+    clearTimeout(tapTimer2.current);
+    tapTimer2.current = setTimeout(() => {
+      if (tapCount.current >= 3) {
+        setWeight(null);
+        try { localStorage.removeItem(storageKey); } catch {}
+      }
+      tapCount.current = 0;
+    }, 400);
+  };
+
+  const nudge = (dir, e) => {
+    e.stopPropagation();
+    const cur = weight ?? DB_WEIGHTS[0];
+    const idx = DB_WEIGHTS.indexOf(snap(cur));
+    const newW = DB_WEIGHTS[Math.max(0, Math.min(DB_WEIGHTS.length-1, idx+dir))];
+    setWeight(newW); saveWeight(storageKey, newW);
+  };
+
+  const handlePointerDown = (e) => {
+    e.stopPropagation();
+    dragRef.current = { startX: e.clientX, startWeight: weight ?? DB_WEIGHTS[0] };
+    containerRef.current?.setPointerCapture(e.pointerId);
+  };
+  const handlePointerMove = (e) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const startIdx = DB_WEIGHTS.indexOf(snap(dragRef.current.startWeight));
+    const newIdx   = Math.max(0, Math.min(DB_WEIGHTS.length-1, startIdx + Math.round(dx/28)));
+    const newW = DB_WEIGHTS[newIdx];
+    if (newW !== weight) { setWeight(newW); saveWeight(storageKey, newW); }
+  };
+  const handlePointerUp = () => { dragRef.current = null; };
+
+  if (weight === null) {
+    return (
+      <button onClick={e => { e.stopPropagation(); setWeight(DB_WEIGHTS[0]); saveWeight(storageKey, DB_WEIGHTS[0]); }} style={{
+        background:"none", border:`1px dashed ${MUTED}`, borderRadius:6,
+        padding:"3px 10px", color:MUTED, fontSize:11, cursor:"pointer",
+        fontFamily:"inherit", letterSpacing:"0.04em", flexShrink:0
+      }}>+ kg</button>
+    );
+  }
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+      <button onClick={e => nudge(-1,e)} style={{
+        width:24, height:24, borderRadius:"50%", border:`1px solid ${BORDER}`,
+        background:"none", color:MUTED2, fontSize:16, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0
+      }}>-</button>
+      <div ref={containerRef}
+        onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
+        onClick={handleWeightTap}
+        style={{
+          background:`${ORANGE}18`, border:`1px solid ${ORANGE}55`, borderRadius:6,
+          padding:"3px 10px", color:ORANGE, fontSize:12, fontWeight:800,
+          cursor:"ew-resize", touchAction:"none", userSelect:"none", WebkitUserSelect:"none",
+          flexShrink:0, minWidth:52, textAlign:"center", fontFamily:"inherit"
+        }}
+        title="Triple tap to clear">
+        {weight}kg
+      </div>
+      <button onClick={e => nudge(1,e)} style={{
+        width:24, height:24, borderRadius:"50%", border:`1px solid ${BORDER}`,
+        background:"none", color:MUTED2, fontSize:16, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0
+      }}>+</button>
+    </div>
+  );
+}
+
+const BAND_COLOURS = [
+  { key:"red",    label:"Red",    hex:"#ef4444", resistance:"Light" },
+  { key:"black",  label:"Black",  hex:"#555555", resistance:"Medium" },
+  { key:"purple", label:"Purple", hex:"#a78bfa", resistance:"Heavy" },
+  { key:"green",  label:"Green",  hex:"#4ade80", resistance:"Thickest" },
+];
+
+function BandSelector({ exKey }) {
+  const storageKey = `band_${exKey}`;
+  const [selected, setSelected] = useState(() => { try { return localStorage.getItem(storageKey) || null; } catch { return null; } });
+
+  const choose = (key, e) => {
+    e.stopPropagation();
+    const next = selected === key ? null : key;
+    setSelected(next);
+    try { next ? localStorage.setItem(storageKey, next) : localStorage.removeItem(storageKey); } catch {}
+  };
+
+  return (
+    <div style={{ display:"flex", gap:5, alignItems:"center" }}>
+      {BAND_COLOURS.map(b => (
+        <button key={b.key} onClick={e => choose(b.key, e)}
+          title={`${b.label} - ${b.resistance}`}
+          style={{
+            width:22, height:22, borderRadius:"50%",
+            background: b.hex,
+            border: selected===b.key ? `3px solid #fff` : `2px solid ${b.hex}55`,
+            cursor:"pointer", flexShrink:0, transition:"all 0.15s",
+            opacity: selected && selected!==b.key ? 0.3 : 1,
+            boxShadow: selected===b.key ? `0 0 0 2px ${b.hex}` : "none"
+          }}/>
+      ))}
+    </div>
+  );
+}
+
+function Timer({ secs: initialSecs }) {
+  const [baseSecs, setBaseSecs]   = useState(initialSecs);
+  const [remaining, setRemaining] = useState(initialSecs);
+  const [running, setRunning]     = useState(false);
+  const [done, setDone]           = useState(false);
+  const tapTimer   = useRef(null);
+  const dragStart  = useRef(null);
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    if (!running) return;
+    if (remaining <= 0) { setRunning(false); setDone(true); return; }
+    const id = setTimeout(() => setRemaining(r => r-1), 1000);
+    return () => clearTimeout(id);
+  }, [running, remaining]);
+
+  const reset = useCallback((s) => {
+    const v = s ?? baseSecs;
+    setBaseSecs(v); setRemaining(v); setRunning(false); setDone(false);
+  }, [baseSecs]);
+
+  const handleClick = () => {
+    if (isDragging.current) return;
+    if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; reset(); return; }
+    tapTimer.current = setTimeout(() => {
+      tapTimer.current = null;
+      if (done) { reset(); return; }
+      setRunning(r => !r);
+    }, 300);
+  };
+  const handlePointerDown = (e) => {
+    dragStart.current = { x: e.clientX, originalSecs: baseSecs }; isDragging.current = false;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handlePointerMove = (e) => {
+    if (!dragStart.current) return;
+    const dx = e.clientX - dragStart.current.x;
+    if (Math.abs(dx) > 8) isDragging.current = true;
+    const s = Math.max(5, dragStart.current.originalSecs + Math.round(dx/20)*10);
+    if (s !== baseSecs) { setBaseSecs(s); setRemaining(s); setRunning(false); setDone(false); }
+  };
+  const handlePointerUp = () => { dragStart.current = null; };
+
+  const pct = baseSecs > 0 ? ((baseSecs-remaining)/baseSecs)*100 : 0;
+  const m = Math.floor(remaining/60), s = remaining%60;
+  const display = m > 0 ? `${m}:${String(s).padStart(2,"0")}` : `${s}s`;
+  const R=22, SZ=52, CX=SZ/2, circ=2*Math.PI*R;
+
+  return (
+    <button onClick={handleClick} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
+      style={{ width:SZ, height:SZ, borderRadius:"50%", position:"relative", background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0, touchAction:"none", userSelect:"none" }}>
+      <svg width={SZ} height={SZ} style={{ transform:"rotate(-90deg)", position:"absolute", inset:0 }}>
+        <circle cx={CX} cy={CX} r={R} fill="rgba(255,255,255,0.02)" stroke="#2a2a2a" strokeWidth="3"/>
+        <circle cx={CX} cy={CX} r={R} fill="none" stroke={done?GREEN:running?ORANGE:"#444"} strokeWidth="3"
+          strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)} strokeLinecap="round"
+          style={{ transition:"stroke-dashoffset 0.9s linear,stroke 0.3s" }}/>
+      </svg>
+      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center",
+        fontSize:done?14:10, fontWeight:800, color:done?GREEN:running?"#fff":MUTED2,
+        fontFamily:"inherit", letterSpacing:-0.5, pointerEvents:"none" }}>
+        {done ? "✓" : display}
+      </div>
+    </button>
+  );
+}
+
+function SetCircles({ count, exKey, onAllDone, clearSignal }) {
+  const [done, setDone] = useState(() => getSets(exKey));
+  useEffect(() => { setDone([]); onAllDone?.(false); }, [clearSignal]);
+  const toggle = (i) => {
+    const next = done.includes(i) ? done.filter(x=>x!==i) : [...done,i];
+    setDone(next); saveSets(exKey,next); onAllDone?.(next.length>=count);
+  };
+  return (
+    <div style={{ display:"flex", gap:7, alignItems:"center" }}>
+      {Array.from({ length:count }, (_,i) => {
+        const isDone = done.includes(i);
+        return (
+          <button key={i} onClick={e => { e.stopPropagation(); toggle(i); }} style={{
+            width:30, height:30, borderRadius:"50%",
+            border:`2px solid ${isDone ? GREEN : BORDER}`,
+            background: isDone ? GREEN : "transparent",
+            cursor:"pointer", transition:"all 0.2s", flexShrink:0,
+            display:"flex", alignItems:"center", justifyContent:"center"
+          }}>
+            {isDone && <span style={{ color:"#000", fontSize:13, fontWeight:900 }}>&#10003;</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ExCard({ ex, dayId, idx, reorderMode, dragHandleProps, clearSignal }) {
+  const exKey   = `d${dayId}_e${idx}`;
+  const repsKey = `reps_${exKey}`;
+  const [completed, setCompleted] = useState(false);
+  const [noteOpen, setNoteOpen]   = useState(false);
+  const baseReps = parseInt(String(ex.reps).replace(/[^0-9]/g,"")) || 0;
+  const hasSuffix = /[^0-9]/.test(String(ex.reps));
+  const suffix = hasSuffix ? String(ex.reps).replace(/[0-9]/g,"") : "";
+  const [reps, setReps] = useState(() => getReps(repsKey) ?? baseReps);
+  const nudgeReps = (dir, e) => {
+    e.stopPropagation();
+    const next = Math.max(1, reps + dir);
+    setReps(next); saveReps(repsKey, next);
+  };
+  useEffect(() => { setCompleted(false); }, [clearSignal]);
+
+  return (
+    <div style={{
+      background: CARD2, borderRadius:10,
+      border:`1px solid ${reorderMode ? ORANGE+"60" : completed ? `${GREEN}45` : BORDER}`,
+      overflow:"hidden", transition:"border-color 0.3s",
+      opacity: reorderMode ? 0.95 : 1,
+    }}>
+      <div style={{ padding:"11px 14px 7px", display:"flex", alignItems:"center", gap:8 }}>
+        {reorderMode ? (
+          <div {...dragHandleProps} style={{
+            cursor:"grab", color:ORANGE, fontSize:16, flexShrink:0,
+            padding:"0 4px 0 0", touchAction:"none", userSelect:"none",
+            display:"flex", flexDirection:"column", gap:2, justifyContent:"center"
+          }}>
+            <div style={{ width:16, height:2, background:ORANGE, borderRadius:1 }}/>
+            <div style={{ width:16, height:2, background:ORANGE, borderRadius:1 }}/>
+            <div style={{ width:16, height:2, background:ORANGE, borderRadius:1 }}/>
+          </div>
+        ) : <KitBadge kit={ex.kit}/>}
+        <span style={{
+          flex:1, fontSize:14, fontWeight:700,
+          color: reorderMode ? ORANGE : completed ? GREEN : TEXT,
+          transition:"color 0.3s", fontFamily:"inherit", lineHeight:1.2
+        }}>{ex.name}</span>
+        {!reorderMode && (
+          <>
+            {!ex.timerSecs && (
+              <div style={{ display:"flex", alignItems:"center", gap:3, flexShrink:0 }}>
+                <button onClick={e => nudgeReps(-1,e)} style={{ background:"none", border:"none", color:MUTED, fontSize:14, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>-</button>
+                <span style={{ fontSize:13, color:completed?GREEN:ORANGE, fontWeight:800, fontFamily:"monospace", transition:"color 0.3s", minWidth:24, textAlign:"center" }}>{reps}{suffix}</span>
+                <button onClick={e => nudgeReps(1,e)} style={{ background:"none", border:"none", color:MUTED, fontSize:14, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>+</button>
+              </div>
+            )}
+            <button onClick={() => setNoteOpen(o=>!o)} style={{
+              background:"none", border:"none", cursor:"pointer",
+              color: noteOpen?ORANGE:MUTED, fontSize:15, padding:"0 2px", flexShrink:0, lineHeight:1
+            }}>i</button>
+            {ex.url && (
+              <a href={ex.url} target="_blank" rel="noreferrer" style={{
+                color:MUTED, fontSize:14, textDecoration:"none", flexShrink:0,
+                display:"flex", alignItems:"center", lineHeight:1
+              }}>&#9654;</a>
+            )}
+          </>
+        )}
+        {reorderMode && <KitBadge kit={ex.kit}/>}
+      </div>
+      {!reorderMode && (
+        <div style={{ padding:"0 14px 12px", display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <SetCircles count={ex.sets} exKey={exKey} onAllDone={setCompleted} clearSignal={clearSignal}/>
+          {ex.kit === "DB" && <WeightSelector exKey={exKey}/>}
+          {ex.kit === "Band" && <BandSelector exKey={exKey}/>}
+          {ex.timerSecs && <Timer secs={ex.timerSecs}/>}
+        </div>
+      )}
+      {!reorderMode && noteOpen && ex.note && (
+        <div style={{ padding:"8px 14px 12px", borderTop:`1px solid ${BORDER}`, fontSize:11, color:MUTED2, lineHeight:1.6 }}>
+          {ex.note}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExerciseList({ dayId, exercises }) {
+  const savedOrder = getOrder(dayId);
+  const [order, setOrder] = useState(() => {
+    if (savedOrder && savedOrder.length === exercises.length) return savedOrder;
+    return exercises.map((_,i) => i);
+  });
+  const [reorderMode, setReorderMode] = useState(false);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [clearSignal, setClearSignal] = useState(0);
+  const longPressTimer = useRef(null);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (shouldAutoClear(dayId)) {
+      clearDaySets(dayId, exercises.length);
+      setClearSignal(s => s + 1);
+    }
+  }, [dayId]);
+
+  const handleClearDay = () => {
+    clearDaySets(dayId, exercises.length);
+    setClearSignal(s => s + 1);
+  };
+
+  const orderedExercises = order.map(i => exercises[i]);
+
+  const handleCardLongPressStart = (e) => {
+    if (reorderMode) return;
+    longPressTimer.current = setTimeout(() => {
+      setReorderMode(true);
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 500);
+  };
+  const handleCardLongPressEnd = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
+  const getDragHandleProps = (orderIdx) => ({
+    onPointerDown: (e) => {
+      e.stopPropagation();
+      setDraggingIdx(orderIdx);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    onPointerMove: (e) => {
+      if (draggingIdx === null) return;
+      const listEl = listRef.current;
+      if (!listEl) return;
+      const cards = Array.from(listEl.children);
+      const y = e.clientY;
+      let overIdx = draggingIdx;
+      cards.forEach((card, i) => {
+        const rect = card.getBoundingClientRect();
+        if (y >= rect.top && y <= rect.bottom) overIdx = i;
+      });
+      if (overIdx !== dragOverIdx) setDragOverIdx(overIdx);
+    },
+    onPointerUp: (e) => {
+      if (draggingIdx !== null && dragOverIdx !== null && draggingIdx !== dragOverIdx) {
+        const newOrder = [...order];
+        const [moved] = newOrder.splice(draggingIdx, 1);
+        newOrder.splice(dragOverIdx, 0, moved);
+        setOrder(newOrder);
+        saveOrder(dayId, newOrder);
+      }
+      setDraggingIdx(null);
+      setDragOverIdx(null);
+    },
+  });
+
+  return (
+    <>
+      <ProgressBar dayId={dayId} exercises={orderedExercises}/>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+        <button onClick={handleClearDay} style={{
+          background:"none", border:`1px solid ${BORDER}`, borderRadius:7, padding:"4px 12px",
+          color:MUTED, fontSize:10, fontWeight:800, cursor:"pointer",
+          fontFamily:"inherit", letterSpacing:"0.08em"
+        }}>x CLEAR DAY</button>
+        <button onClick={() => setReorderMode(o=>!o)} style={{
+          background: reorderMode ? `${GREEN}20` : "none",
+          border:`1px solid ${reorderMode ? GREEN : BORDER}`,
+          borderRadius:7, padding:"4px 12px",
+          color: reorderMode ? GREEN : MUTED,
+          fontSize:10, fontWeight:800, cursor:"pointer",
+          fontFamily:"inherit", letterSpacing:"0.08em", transition:"all 0.2s"
+        }}>{reorderMode ? "✓ DONE" : "REORDER"}</button>
+      </div>
+      <div ref={listRef} style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {orderedExercises.map((ex, i) => {
+          const isDragOver = reorderMode && dragOverIdx === i && draggingIdx !== i;
+          const isDragging = reorderMode && draggingIdx === i;
+          return (
+            <div key={`${order[i]}_${i}`}
+              onPointerDown={handleCardLongPressStart}
+              onPointerUp={handleCardLongPressEnd}
+              onPointerLeave={handleCardLongPressEnd}
+              style={{
+                transition:"transform 0.15s, opacity 0.15s",
+                opacity: isDragging ? 0.5 : 1,
+                transform: isDragOver ? "translateY(-4px)" : "none",
+              }}>
+              {isDragOver && (
+                <div style={{ height:3, background:ORANGE, borderRadius:2, marginBottom:6, opacity:0.8 }}/>
+              )}
+              <ExCard
+                ex={ex} dayId={dayId} idx={order[i]}
+                reorderMode={reorderMode}
+                dragHandleProps={reorderMode ? getDragHandleProps(i) : {}}
+                clearSignal={clearSignal}
+              />
+            </div>
+          );
+        })}
+      </div>
+      {reorderMode && (
+        <p style={{ fontSize:10, color:MUTED, textAlign:"center", marginTop:10 }}>
+          Drag the handle to reorder · Tap DONE when finished
+        </p>
+      )}
+    </>
+  );
+}
+
+function ProgressBar({ dayId, exercises }) {
+  const total = exercises.reduce((s,e) => s+e.sets, 0);
+  const [done, setDone] = useState(0);
+  useEffect(() => {
+    const calc = () => {
+      let sum = 0;
+      for (let i = 0; i < exercises.length; i++) {
+        sum += getSets(`d${dayId}_e${i}`).length;
+      }
+      setDone(sum);
+    };
+    calc();
+    const id = setInterval(calc, 500);
+    return () => clearInterval(id);
+  }, [dayId, exercises]);
+
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+        <span style={{ fontSize:10, color:MUTED, letterSpacing:"0.1em" }}>SESSION PROGRESS</span>
+        <span style={{ fontSize:10, color:pct===100?GREEN:ORANGE, fontWeight:700 }}>{pct===100?"✓ COMPLETE":`${done}/${total} sets`}</span>
+      </div>
+      <div style={{ height:3, background:BORDER, borderRadius:2, overflow:"hidden" }}>
+        <div style={{ height:"100%", width:`${pct}%`, borderRadius:2, background:pct===100?GREEN:ORANGE, transition:"width 0.4s ease" }}/>
+      </div>
+    </div>
+  );
+}
+
+function HiitDay({ day }) {
+  const { workSecs, restSecs, warmupSecs, cooldownSecs, totalRounds, hiitMoves } = day;
+  const [phase, setPhase]         = useState("idle");
+  const [remaining, setRemaining] = useState(0);
+  const [round, setRound]         = useState(0);
+  const phaseDuration = { warmup:warmupSecs, work:workSecs, rest:restSecs, cooldown:cooldownSecs };
+
+  useEffect(() => {
+    if (phase==="idle"||phase==="done") return;
+    if (remaining<=0) {
+      if (phase==="warmup") { setPhase("work"); setRemaining(workSecs); setRound(1); return; }
+      if (phase==="work")   { setPhase("rest"); setRemaining(restSecs); return; }
+      if (phase==="rest") {
+        const nr = round+1;
+        if (nr>totalRounds) { setPhase("cooldown"); setRemaining(cooldownSecs); }
+        else { setRound(nr); setPhase("work"); setRemaining(workSecs); }
+        return;
+      }
+      if (phase==="cooldown") { setPhase("done"); return; }
+    }
+    const id = setTimeout(() => setRemaining(r=>r-1), 1000);
+    return () => clearTimeout(id);
+  }, [phase, remaining]);
+
+  const start = () => { setPhase("warmup"); setRemaining(warmupSecs); setRound(0); };
+  const reset = () => { setPhase("idle"); setRemaining(0); setRound(0); };
+
+  const mins=Math.floor(remaining/60), secs=remaining%60;
+  const display=`${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+  const phaseColor={warmup:MUTED2,work:ORANGE,rest:GREEN,cooldown:PURPLE,done:GREEN}[phase]||MUTED;
+  const phaseLabel={warmup:"WARM UP",work:"WORK",rest:"REST",cooldown:"COOL DOWN",done:"DONE!",idle:"READY"}[phase];
+  const dur=phaseDuration[phase]||1;
+  const pct=phase==="idle"||phase==="done"?(phase==="done"?100:0):((dur-remaining)/dur)*100;
+  const R=80,SZ=200,CX=SZ/2,circ=2*Math.PI*R;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12, paddingTop:8 }}>
+      <div style={{ background:CARD2, borderRadius:10, border:`1px solid ${BORDER}`, overflow:"hidden" }}>
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${BORDER}`, fontSize:10, fontWeight:800, letterSpacing:"0.1em", color:ORANGE }}>MOVEMENTS</div>
+        <div style={{ padding:"10px 14px", display:"flex", gap:8 }}>
+          {hiitMoves.map((m,i) => (
+            <span key={i} style={{ background:`${ORANGE}15`, border:`1px solid ${ORANGE}40`, borderRadius:6, padding:"4px 10px", fontSize:12, color:ORANGE, fontWeight:700 }}>{m}</span>
+          ))}
+        </div>
+      </div>
+      <div style={{ background:CARD2, borderRadius:12, border:`1px solid ${BORDER}`, padding:"24px 16px", display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+        <div style={{ position:"relative", width:SZ, height:SZ }}>
+          <svg width={SZ} height={SZ} style={{ transform:"rotate(-90deg)", position:"absolute", inset:0 }}>
+            <circle cx={CX} cy={CX} r={R} fill="rgba(255,255,255,0.02)" stroke="#222" strokeWidth="8"/>
+            <circle cx={CX} cy={CX} r={R} fill="none" stroke={phaseColor} strokeWidth="8"
+              strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)} strokeLinecap="round"
+              style={{ transition:"stroke-dashoffset 0.9s linear,stroke 0.4s" }}/>
+          </svg>
+          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4 }}>
+            <span style={{ fontSize:10, fontWeight:800, letterSpacing:"0.15em", color:phaseColor }}>{phaseLabel}</span>
+            <span style={{ fontSize:42, fontWeight:900, color:phase==="done"?GREEN:"#fff", fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", letterSpacing:-1, lineHeight:1 }}>
+              {phase==="done"?"✓":phase==="idle"?"GO":display}
+            </span>
+            {phase!=="idle"&&phase!=="done"&&round>0&&(
+              <span style={{ fontSize:12, color:MUTED2 }}>Round {round}/{totalRounds}</span>
+            )}
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:10 }}>
+          {phase==="idle"&&<button onClick={start} style={{ background:ORANGE, border:"none", borderRadius:10, color:"#000", fontSize:14, fontWeight:900, padding:"10px 32px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.08em" }}>START</button>}
+          {phase!=="idle"&&<button onClick={reset} style={{ background:"none", border:`1px solid ${BORDER}`, borderRadius:10, color:MUTED2, fontSize:13, fontWeight:800, padding:"10px 24px", cursor:"pointer", fontFamily:"inherit" }}>RESET</button>}
+        </div>
+        {phase!=="idle"&&(
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", justifyContent:"center" }}>
+            {Array.from({length:totalRounds},(_,i)=>(
+              <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:i<round?GREEN:i===round-1&&phase==="work"?ORANGE:BORDER, transition:"background 0.3s" }}/>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        {[["WORK",`${workSecs}s`,ORANGE],["REST",`${restSecs}s`,GREEN],["ROUNDS",`${totalRounds}`,MUTED2]].map(([l,v,c])=>(
+          <div key={l} style={{ flex:1, background:CARD2, borderRadius:8, border:`1px solid ${BORDER}`, padding:"10px 12px", textAlign:"center" }}>
+            <div style={{ fontSize:9, color:MUTED, letterSpacing:"0.1em", marginBottom:3 }}>{l}</div>
+            <div style={{ fontSize:18, fontWeight:900, color:c }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const MEASURE_FIELDS = [
+  { key:"chest",     label:"Chest",       note:"At nipple line, arms relaxed" },
+  { key:"waist",     label:"Waist",       note:"At navel or narrowest point" },
+  { key:"hips",      label:"Hips",        note:"Widest point" },
+  { key:"shoulders", label:"Shoulders",   note:"Around fullest part, arms down" },
+  { key:"upperArm",  label:"Upper Arm",   note:"Dominant arm, flexed at peak" },
+  { key:"forearm",   label:"Forearm",     note:"Widest point" },
+  { key:"thigh",     label:"Upper Thigh", note:"Just below glute fold" },
+  { key:"calf",      label:"Calf",        note:"Widest point, standing" },
+  { key:"neck",      label:"Neck",        note:"Useful for body fat estimates" },
+];
+
+function getMeasurements() { try { return JSON.parse(localStorage.getItem("measurements") || "[]"); } catch { return []; } }
+function saveMeasurements(v) { try { localStorage.setItem("measurements", JSON.stringify(v)); } catch {} }
+
+function MeasurementsPage({ onClose }) {
+  const [log, setLog] = useState(() => getMeasurements());
+  const [entry, setEntry] = useState(() => Object.fromEntries(MEASURE_FIELDS.map(f => [f.key, ""])));
+  const [view, setView] = useState("log");
+  const [chartField, setChartField] = useState(MEASURE_FIELDS[0].key);
+
+  const saveEntry = () => {
+    const hasData = MEASURE_FIELDS.some(f => entry[f.key] !== "");
+    if (!hasData) return;
+    const record = {
+      date: new Date().toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }),
+      ...Object.fromEntries(MEASURE_FIELDS.map(f => [f.key, entry[f.key] ? parseFloat(entry[f.key]) : null]))
+    };
+    const next = [...log, record];
+    setLog(next); saveMeasurements(next);
+    setEntry(Object.fromEntries(MEASURE_FIELDS.map(f => [f.key, ""])));
+    setView("log");
+  };
+
+  const chartData = log.filter(r => r[chartField] !== null && r[chartField] !== undefined);
+  const vals = chartData.map(r => r[chartField]);
+  const maxV = vals.length ? Math.max(...vals) : 50;
+  const minV = vals.length ? Math.min(...vals) : 0;
+  const rangeV = maxV - minV || 1;
+  const CW=320, CH=160, PL=36, PR=12, PT=12, PB=28;
+  const plotW=CW-PL-PR, plotH=CH-PT-PB;
+  const toX = i => PL + (chartData.length>1 ? (i/(chartData.length-1))*plotW : plotW/2);
+  const toY = v => PT + plotH - ((v-minV)/rangeV)*plotH;
+  const pathD = chartData.length > 1
+    ? chartData.map((r,i) => `${i===0?"M":"L"}${toX(i).toFixed(1)},${toY(r[chartField]).toFixed(1)}`).join(" ")
+    : "";
+  const latest = chartData[chartData.length-1]?.[chartField];
+  const first  = chartData[0]?.[chartField];
+  const diff   = latest !== undefined && first !== undefined ? (latest - first).toFixed(1) : null;
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:`1px solid ${BORDER}`, position:"sticky", top:0, background:BG, zIndex:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <button onClick={onClose} style={{ background:"none", border:`1px solid ${BORDER}`, borderRadius:8, color:MUTED2, fontSize:12, padding:"6px 12px", cursor:"pointer", fontFamily:"inherit" }}>BACK</button>
+          <span style={{ fontSize:20, fontWeight:800, flex:1 }}>MEASUREMENTS</span>
+          {view !== "entry" && (
+            <button onClick={() => setView("entry")} style={{ background:`${ORANGE}18`, border:`1px solid ${ORANGE}50`, borderRadius:8, color:ORANGE, fontSize:11, fontWeight:800, padding:"6px 12px", cursor:"pointer", fontFamily:"inherit" }}>+ LOG</button>
+          )}
+        </div>
+        {view !== "entry" && (
+          <div style={{ display:"flex", gap:6, marginTop:10 }}>
+            {[["log","HISTORY"],["chart","CHART"]].map(([v,label]) => (
+              <button key={v} onClick={() => setView(v)} style={{
+                padding:"5px 14px", borderRadius:7, fontSize:11, fontWeight:800,
+                border:`1px solid ${view===v?ORANGE:BORDER}`,
+                background: view===v?`${ORANGE}18`:"transparent",
+                color: view===v?ORANGE:MUTED2,
+                cursor:"pointer", fontFamily:"inherit"
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ padding:"14px 16px" }}>
+        {view === "entry" && (
+          <div>
+            <p style={{ color:MUTED2, fontSize:11, margin:"0 0 14px", lineHeight:1.6 }}>
+              Measure first thing in the morning, before food. Keep tape snug but not tight.
+            </p>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {MEASURE_FIELDS.map(f => (
+                <div key={f.key} style={{ background:CARD2, borderRadius:10, border:`1px solid ${BORDER}`, padding:"10px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:1 }}>{f.label}</div>
+                    <div style={{ fontSize:10, color:MUTED }}>{f.note}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                    <input
+                      type="number" inputMode="decimal"
+                      value={entry[f.key]}
+                      onChange={e => setEntry(prev => ({...prev, [f.key]: e.target.value}))}
+                      placeholder="--"
+                      style={{
+                        width:58, padding:"6px 8px", borderRadius:6,
+                        border:`1px solid ${entry[f.key]?ORANGE:BORDER}`,
+                        background:CARD, color:ORANGE, fontSize:14, fontWeight:800,
+                        fontFamily:"inherit", textAlign:"right", outline:"none"
+                      }}/>
+                    <span style={{ fontSize:11, color:MUTED }}>cm</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:14 }}>
+              <button onClick={() => setView("log")} style={{ flex:1, background:"none", border:`1px solid ${BORDER}`, borderRadius:10, color:MUTED2, fontSize:13, fontWeight:800, padding:"10px", cursor:"pointer", fontFamily:"inherit" }}>CANCEL</button>
+              <button onClick={saveEntry} style={{ flex:2, background:ORANGE, border:"none", borderRadius:10, color:"#000", fontSize:13, fontWeight:900, padding:"10px", cursor:"pointer", fontFamily:"inherit" }}>SAVE MEASUREMENTS</button>
+            </div>
+          </div>
+        )}
+        {view === "log" && (
+          log.length === 0
+            ? <div style={{ color:MUTED, fontSize:13, textAlign:"center", marginTop:60 }}>No measurements yet.<br/>Tap + LOG to add your first entry.</div>
+            : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {[...log].reverse().map((record, i) => (
+                  <div key={i} style={{ background:CARD2, borderRadius:10, border:`1px solid ${BORDER}`, padding:"12px 14px" }}>
+                    <div style={{ fontSize:12, color:ORANGE, fontWeight:800, marginBottom:8 }}>{record.date}</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 0" }}>
+                      {MEASURE_FIELDS.filter(f => record[f.key] !== null && record[f.key] !== undefined).map(f => (
+                        <div key={f.key} style={{ width:"50%", display:"flex", justifyContent:"space-between", paddingRight:16 }}>
+                          <span style={{ fontSize:11, color:MUTED2 }}>{f.label}</span>
+                          <span style={{ fontSize:11, fontWeight:800, color:TEXT }}>{record[f.key]}cm</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+        )}
+        {view === "chart" && (
+          <div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:"0.1em", marginBottom:6 }}>MEASUREMENT</div>
+              <div style={{ position:"relative" }}>
+                <select value={chartField} onChange={e => setChartField(e.target.value)} style={{
+                  width:"100%", padding:"10px 36px 10px 14px",
+                  background:CARD2, border:`1px solid ${ORANGE}55`,
+                  borderRadius:8, color:ORANGE, fontSize:13, fontWeight:800,
+                  fontFamily:"inherit", cursor:"pointer", appearance:"none",
+                  WebkitAppearance:"none", outline:"none"
+                }}>
+                  {MEASURE_FIELDS.map(f => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
+                  ))}
+                </select>
+                <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:ORANGE, fontSize:12 }}>v</div>
+              </div>
+            </div>
+            {chartData.length > 0 && (
+              <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+                {[
+                  ["LATEST", latest !== undefined ? `${latest}cm` : "--", ORANGE],
+                  ["ENTRIES", chartData.length, TEXT],
+                  ["CHANGE", diff !== null ? `${diff>0?"+":""}${diff}cm` : "--", diff>0?ORANGE:diff<0?GREEN:MUTED2],
+                ].map(([label,val,color]) => (
+                  <div key={label} style={{ flex:1, background:CARD2, borderRadius:8, border:`1px solid ${BORDER}`, padding:"10px 12px" }}>
+                    <div style={{ fontSize:9, color:MUTED, letterSpacing:"0.1em", marginBottom:3 }}>{label}</div>
+                    <div style={{ fontSize:18, fontWeight:900, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ background:CARD2, borderRadius:12, border:`1px solid ${BORDER}`, padding:"14px 10px 8px" }}>
+              {chartData.length < 2
+                ? <div style={{ color:MUTED, fontSize:12, textAlign:"center", padding:"40px 0" }}>Need at least 2 entries to show a chart.</div>
+                : (
+                  <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ overflow:"visible" }}>
+                    {[0,.5,1].map((t,i) => {
+                      const v = minV + rangeV*t;
+                      const y = toY(v);
+                      return (
+                        <g key={i}>
+                          <line x1={PL} y1={y} x2={CW-PR} y2={y} stroke={BORDER} strokeWidth="1" strokeDasharray="3,3"/>
+                          <text x={PL-4} y={y+4} textAnchor="end" fontSize="9" fill={MUTED}>{v.toFixed(1)}</text>
+                        </g>
+                      );
+                    })}
+                    <path
+                      d={`${pathD} L${toX(chartData.length-1).toFixed(1)},${(PT+plotH).toFixed(1)} L${toX(0).toFixed(1)},${(PT+plotH).toFixed(1)} Z`}
+                      fill={`${ORANGE}15`}/>
+                    <path d={pathD} fill="none" stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    {chartData.map((r,i) => {
+                      const isLatest = i === chartData.length-1;
+                      return <circle key={i} cx={toX(i)} cy={toY(r[chartField])} r={isLatest?5:3.5} fill={isLatest?ORANGE:CARD2} stroke={ORANGE} strokeWidth="2"/>;
+                    })}
+                    {[0, Math.floor((chartData.length-1)/2), chartData.length-1]
+                      .filter((v,i,a) => a.indexOf(v)===i)
+                      .map(i => (
+                        <text key={i} x={toX(i)} y={CH-2} textAnchor="middle" fontSize="8" fill={MUTED}>
+                          {chartData[i].date.split(" ").slice(0,2).join(" ")}
+                        </text>
+                      ))
+                    }
+                  </svg>
+                )
+              }
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ExerciseSheet({ onClose }) {
+  return (
+    <div style={{ minHeight:"100vh", background:"#fff", color:"#111", fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:"1px solid #ddd", position:"sticky", top:0, background:"#fff", display:"flex", alignItems:"center", gap:14, zIndex:10 }}>
+        <button onClick={onClose} style={{ background:"none", border:"1px solid #ccc", borderRadius:8, color:"#666", fontSize:12, padding:"6px 12px", cursor:"pointer", fontFamily:"inherit" }}>BACK</button>
+        <span style={{ fontSize:20, fontWeight:800, flex:1 }}>EXERCISE LIST</span>
+      </div>
+      <div style={{ padding:"16px" }}>
+        {DAYS.filter(d => d.exercises).map(day => (
+          <div key={day.id} style={{ marginBottom:24 }}>
+            <div style={{ borderBottom:"2px solid #111", paddingBottom:4, marginBottom:10 }}>
+              <span style={{ fontSize:16, fontWeight:900, letterSpacing:"0.05em" }}>{day.label} — {day.title}</span>
+              <span style={{ fontSize:11, color:"#666", marginLeft:8 }}>{day.sub}</span>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+              {day.exercises.map((ex, i) => (
+                <div key={i} style={{
+                  display:"flex", alignItems:"baseline", gap:10,
+                  padding:"7px 0",
+                  borderBottom: i < day.exercises.length-1 ? "1px solid #eee" : "none"
+                }}>
+                  <span style={{ fontSize:11, color:"#999", width:28, flexShrink:0, fontWeight:700 }}>
+                    {ex.kit === "DB" ? "DB" : ex.kit === "Band" ? "RB" : "BW"}
+                  </span>
+                  <span style={{ flex:1, fontSize:13, fontWeight:700 }}>{ex.name}</span>
+                  <span style={{ fontSize:12, color:"#444", flexShrink:0, fontFamily:"monospace" }}>
+                    {ex.sets}x{ex.reps}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ marginTop:16, fontSize:10, color:"#aaa", textAlign:"center" }}>
+          DB = Dumbbell · RB = Resistance Band · BW = Bodyweight
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatsPage({ onClose }) {
+  const log = getLog();
+  const exerciseNames = [...new Set(log.flatMap(s => s.exercises.map(e => e.name)))].sort();
+  const [selected, setSelected] = useState(exerciseNames[0] || "");
+
+  const dataPoints = log
+    .filter(s => s.exercises.some(e => e.name === selected))
+    .map(s => {
+      const ex = s.exercises.find(e => e.name === selected);
+      return {
+        date: s.date,
+        weight: ex?.weight ?? null,
+        reps: ex?.reps ? parseInt(String(ex.reps).replace(/[^0-9]/g,"")) : null,
+        completed: ex?.completed,
+      };
+    });
+
+  const weights    = dataPoints.map(d => d.weight).filter(v => v !== null);
+  const repsArr    = dataPoints.map(d => d.reps).filter(v => v !== null);
+  const maxW = weights.length ? Math.max(...weights) : 20;
+  const minW = weights.length ? Math.min(...weights) : 0;
+  const rangeW = maxW - minW || 1;
+  const maxR = 20;
+  const latest   = dataPoints[dataPoints.length - 1];
+
+  const CW = 320, CH = 190;
+  const PL = 36, PR = 36, PT = 16, PB = 32;
+  const plotW = CW - PL - PR;
+  const plotH = CH - PT - PB;
+  const n = dataPoints.length;
+
+  const toX  = (i) => PL + (n > 1 ? (i / (n-1)) * plotW : plotW/2);
+  const toYw = (v) => PT + plotH - ((v - minW) / rangeW) * plotH;
+  const toYr = (v) => PT + plotH - (v / (maxR || 1)) * plotH;
+
+  const wPoints = dataPoints.map((d,i) => d.weight !== null ? {x:toX(i), y:toYw(d.weight)} : null).filter(Boolean);
+  const wPath = wPoints.length > 1
+    ? wPoints.map((p,i) => `${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+    : "";
+
+  const wTicks = [0,.25,.5,.75,1].map(t => +(minW + rangeW*t).toFixed(1));
+  const rTicks = [0,.25,.5,.75,1].map(t => Math.round(maxR*t));
+  const barW = n > 1 ? Math.max(4, Math.min(20, plotW/n*0.5)) : 20;
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:`1px solid ${BORDER}`, position:"sticky", top:0, background:BG, display:"flex", alignItems:"center", gap:14, zIndex:10 }}>
+        <button onClick={onClose} style={{ background:"none", border:`1px solid ${BORDER}`, borderRadius:8, color:MUTED2, fontSize:12, padding:"6px 12px", cursor:"pointer", fontFamily:"inherit" }}>BACK</button>
+        <span style={{ fontSize:20, fontWeight:800 }}>STATS</span>
+      </div>
+      <div style={{ padding:"16px" }}>
+        {exerciseNames.length === 0 ? (
+          <div style={{ color:MUTED, fontSize:13, textAlign:"center", marginTop:60 }}>
+            No logged sessions yet.<br/>Log a session after training to see stats.
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:10, color:MUTED, letterSpacing:"0.1em", marginBottom:6 }}>EXERCISE</div>
+              <div style={{ position:"relative" }}>
+                <select
+                  value={selected}
+                  onChange={e => setSelected(e.target.value)}
+                  style={{
+                    width:"100%", padding:"10px 36px 10px 14px",
+                    background:CARD2, border:`1px solid ${ORANGE}55`,
+                    borderRadius:8, color:ORANGE, fontSize:13, fontWeight:800,
+                    fontFamily:"inherit", cursor:"pointer", appearance:"none",
+                    WebkitAppearance:"none", outline:"none", letterSpacing:"0.02em"
+                  }}>
+                  {exerciseNames.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:ORANGE, fontSize:12 }}>v</div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[
+                ["SESSIONS LOGGED", dataPoints.length, ORANGE],
+                ["LATEST WEIGHT",   latest?.weight !== null && latest?.weight !== undefined ? `${latest.weight}kg` : "--", TEXT],
+                ["LATEST REPS",     latest?.reps ?? "--", TEXT],
+              ].map(([label, val, color]) => (
+                <div key={label} style={{ flex:1, background:CARD2, borderRadius:8, border:`1px solid ${BORDER}`, padding:"10px 14px" }}>
+                  <div style={{ fontSize:9, color:MUTED, letterSpacing:"0.1em", marginBottom:3 }}>{label}</div>
+                  <div style={{ fontSize:20, fontWeight:900, color }}>{val}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background:CARD2, borderRadius:12, border:`1px solid ${BORDER}`, padding:"14px 10px 8px", marginBottom:16 }}>
+              <div style={{ display:"flex", gap:16, marginBottom:10, paddingLeft:4 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                  <div style={{ width:20, height:2.5, background:ORANGE, borderRadius:2 }}/>
+                  <span style={{ fontSize:9, color:MUTED2, letterSpacing:"0.08em" }}>WEIGHT (kg)</span>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                  <div style={{ width:12, height:10, background:"#ffffff15", borderRadius:2, border:"1px solid #ffffff20" }}/>
+                  <span style={{ fontSize:9, color:MUTED2, letterSpacing:"0.08em" }}>REPS</span>
+                </div>
+              </div>
+              {dataPoints.length === 0 ? (
+                <div style={{ color:MUTED, fontSize:12, textAlign:"center", padding:"40px 0" }}>No data yet.</div>
+              ) : (
+                <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} style={{ overflow:"visible" }}>
+                  {wTicks.map((v,i) => {
+                    const y = toYw(v);
+                    return (
+                      <g key={i}>
+                        <line x1={PL} y1={y} x2={CW-PR} y2={y} stroke={BORDER} strokeWidth="1" strokeDasharray="3,3"/>
+                        <text x={PL-4} y={y+4} textAnchor="end" fontSize="9" fill={ORANGE+"aa"}>{v}</text>
+                      </g>
+                    );
+                  })}
+                  {rTicks.filter((_,i)=>i>0).map((v,i) => {
+                    const y = toYr(v);
+                    return (
+                      <text key={i} x={CW-PR+4} y={y+4} textAnchor="start" fontSize="9" fill={PURPLE+"aa"}>{v}</text>
+                    );
+                  })}
+                  {dataPoints.map((d, i) => {
+                    if (d.reps === null) return null;
+                    const x = toX(i);
+                    const y = toYr(d.reps);
+                    const h = (PT + plotH) - y;
+                    return (
+                      <rect key={i}
+                        x={x - barW/2} y={y} width={barW} height={Math.max(1,h)}
+                        fill="#ffffff10" stroke="#ffffff18"
+                        strokeWidth="1" rx="2"/>
+                    );
+                  })}
+                  {wPoints.length > 1 && (
+                    <path
+                      d={`${wPath} L${wPoints[wPoints.length-1].x.toFixed(1)},${(PT+plotH).toFixed(1)} L${wPoints[0].x.toFixed(1)},${(PT+plotH).toFixed(1)} Z`}
+                      fill={`${ORANGE}15`}/>
+                  )}
+                  {wPoints.length > 1 && (
+                    <path d={wPath} fill="none" stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  )}
+                  {dataPoints.map((d, i) => {
+                    if (d.weight === null) return null;
+                    const x = toX(i), y = toYw(d.weight);
+                    const isLatest = i === dataPoints.length - 1;
+                    return (
+                      <circle key={i} cx={x} cy={y} r={isLatest ? 5 : 3.5}
+                        fill={isLatest ? ORANGE : CARD2}
+                        stroke={ORANGE} strokeWidth="2"/>
+                    );
+                  })}
+                  {[0, Math.floor((n-1)/2), n-1]
+                    .filter((v,i,a) => a.indexOf(v)===i && dataPoints[v])
+                    .map(i => (
+                      <text key={i} x={toX(i)} y={CH-4} textAnchor="middle" fontSize="8" fill={MUTED}>
+                        {dataPoints[i].date.split(" ").slice(0,2).join(" ")}
+                      </text>
+                    ))
+                  }
+                </svg>
+              )}
+            </div>
+            {dataPoints.length > 0 && (
+              <div style={{ background:CARD2, borderRadius:10, border:`1px solid ${BORDER}`, overflow:"hidden" }}>
+                <div style={{ padding:"10px 14px", borderBottom:`1px solid ${BORDER}`, fontSize:10, fontWeight:800, letterSpacing:"0.1em", color:MUTED }}>RECENT SESSIONS</div>
+                {[...dataPoints].reverse().slice(0,8).map((d, i, arr) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 14px", borderBottom:i<arr.length-1?`1px solid ${BORDER}`:"none" }}>
+                    <span style={{ fontSize:11, color:MUTED2 }}>{d.date.split(" ").slice(0,3).join(" ")}</span>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      {d.reps !== null && (
+                        <span style={{ fontSize:12, fontWeight:700, color:MUTED2 }}>{d.reps} reps</span>
+                      )}
+                      {d.weight !== null && (
+                        <span style={{ fontSize:13, fontWeight:800, color:ORANGE }}>{d.weight}kg</span>
+                      )}
+                      <span style={{ fontSize:10, color:d.completed?GREEN:MUTED }}>{d.completed?"✓":"✗"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SessionLog({ onClose }) {
+  const log = getLog();
+  return (
+    <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:`1px solid ${BORDER}`, position:"sticky", top:0, background:BG, display:"flex", alignItems:"center", gap:14 }}>
+        <button onClick={onClose} style={{ background:"none", border:`1px solid ${BORDER}`, borderRadius:8, color:MUTED2, fontSize:12, padding:"6px 12px", cursor:"pointer", fontFamily:"inherit" }}>BACK</button>
+        <span style={{ fontSize:20, fontWeight:800 }}>SESSION HISTORY</span>
+      </div>
+      <div style={{ padding:"14px 16px" }}>
+        {log.length===0
+          ? <div style={{ color:MUTED, fontSize:13, textAlign:"center", marginTop:60 }}>No sessions logged yet.</div>
+          : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {[...log].reverse().map((entry,i)=>(
+                <div key={i} style={{ background:CARD2, borderRadius:10, border:`1px solid ${BORDER}`, padding:"14px 16px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+                    <span style={{ fontSize:14, fontWeight:800, color:ORANGE }}>{entry.day}</span>
+                    <span style={{ fontSize:10, color:MUTED }}>{entry.date}</span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                    {entry.exercises.map((ex,j)=>(
+                      <div key={j} style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                        <span style={{ color:MUTED2 }}>{ex.name}</span>
+                        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                          {ex.reps&&<span style={{ color:MUTED2 }}>{ex.reps}</span>}
+                          {ex.band&&<span style={{ color: BAND_COLOURS.find(b=>b.key===ex.band)?.hex||MUTED2, fontWeight:700 }}>{ex.band}</span>}
+                          {ex.weight&&<span style={{ color:ORANGE, fontWeight:700 }}>{ex.weight}kg</span>}
+                          <span style={{ color:ex.completed?GREEN:MUTED, fontWeight:700 }}>{ex.completed?"✓":`${ex.done}/${ex.sets}`}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+function RestDay({ tips }) {
+  return (
+    <div style={{ paddingTop:16 }}>
+      <div style={{ background:CARD2, borderRadius:12, border:`1px solid ${BORDER}`, padding:20, textAlign:"center" }}>
+        <div style={{ fontSize:36, marginBottom:12 }}>&#128716;</div>
+        <p style={{ color:MUTED2, fontSize:13, margin:"0 0 16px" }}>Recovery is where growth happens.</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {tips.map((t,i)=><div key={i} style={{ background:CARD, borderRadius:8, padding:"8px 14px", fontSize:12, color:MUTED2, textAlign:"left" }}>· {t}</div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [dayIdx, setDayIdx]   = useState(0);
+  const [showLog, setShowLog] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showMeasurements, setShowMeasurements] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  const day = DAYS[dayIdx];
+
+  const logSession = () => {
+    if (!day.exercises) return;
+    const savedOrder = getOrder(dayIdx);
+    const order = (savedOrder && savedOrder.length === day.exercises.length) ? savedOrder : day.exercises.map((_,i)=>i);
+    const entry = {
+      day: `${day.label} - ${day.title}`,
+      date: new Date().toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }),
+      exercises: order.map(origIdx => {
+        const ex = day.exercises[origIdx];
+        const exKey = `d${dayIdx}_e${origIdx}`;
+        const done = getSets(exKey).length;
+        const wt   = ex.kit==="DB"   ? getWeight(`weight_${exKey}`) : null;
+        const band = ex.kit==="Band" ? (()=>{ try { return localStorage.getItem(`band_${exKey}`)||null; } catch { return null; } })() : null;
+        const savedReps = getReps(`reps_${exKey}`);
+        const baseReps = parseInt(String(ex.reps).replace(/[^0-9]/g,"")) || 0;
+        const suffix = String(ex.reps).replace(/[0-9]/g,"");
+        const reps = (savedReps ?? baseReps) + suffix;
+        return { name:ex.name, sets:ex.sets, done, completed:done>=ex.sets, weight:wt, band, reps };
+      })
+    };
+    const log = getLog(); log.push(entry); saveLog(log);
+    alert("Session logged! ✓");
+  };
+
+  if (showLog) return <SessionLog onClose={()=>setShowLog(false)}/>;
+  if (showStats) return <StatsPage onClose={()=>setShowStats(false)}/>;
+  if (showMeasurements) return <MeasurementsPage onClose={()=>setShowMeasurements(false)}/>;
+  if (showSheet) return <ExerciseSheet onClose={()=>setShowSheet(false)}/>;
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, color:TEXT, fontFamily:"'Barlow Condensed','Arial Narrow',Arial,sans-serif", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+      <div style={{ padding:"18px 16px 12px", borderBottom:`1px solid ${BORDER}`, position:"sticky", top:0, background:BG, zIndex:10 }}>
+        <div style={{ display:"flex", gap:6, justifyContent:"flex-end", marginBottom:8 }}>
+          {day.exercises&&(
+            <button onClick={logSession} style={{ background:`${ORANGE}18`, border:`1px solid ${ORANGE}50`, borderRadius:7, color:ORANGE, fontSize:11, fontWeight:800, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.05em" }}>LOG</button>
+          )}
+          <button onClick={()=>setShowLog(true)} style={{ background:CARD2, border:`1px solid ${BORDER}`, borderRadius:7, color:MUTED2, fontSize:11, fontWeight:800, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.05em" }}>HISTORY</button>
+          <button onClick={()=>setShowStats(true)} style={{ background:CARD2, border:`1px solid ${BORDER}`, borderRadius:7, color:MUTED2, fontSize:11, fontWeight:800, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.05em" }}>STATS</button>
+          <button onClick={()=>setShowMeasurements(true)} style={{ background:CARD2, border:`1px solid ${BORDER}`, borderRadius:7, color:MUTED2, fontSize:11, fontWeight:800, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.05em" }}>📏</button>
+          <button onClick={()=>setShowSheet(true)} style={{ background:CARD2, border:`1px solid ${BORDER}`, borderRadius:7, color:MUTED2, fontSize:11, fontWeight:800, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.05em" }}>📋</button>
+        </div>
+        <div>
+          <div style={{ fontSize:10, letterSpacing:"0.15em", color:MUTED, marginBottom:2 }}>TRAINING PLAN</div>
+          <div style={{ fontSize:22, fontWeight:800, color:TEXT }}>{day.label} — {day.title}</div>
+          <div style={{ fontSize:12, color:MUTED2, marginTop:1 }}>{day.sub}</div>
+        </div>
+      </div>
+      <div style={{ display:"flex", gap:6, padding:"10px 16px", overflowX:"auto", borderBottom:`1px solid ${BORDER}` }}>
+        {DAYS.map((d,i)=>(
+          <button key={i} onClick={()=>setDayIdx(i)} style={{
+            flexShrink:0, padding:"6px 12px", borderRadius:8,
+            border:`1px solid ${i===dayIdx?ORANGE:BORDER}`,
+            background:i===dayIdx?`${ORANGE}18`:"transparent",
+            color:i===dayIdx?ORANGE:MUTED2,
+            fontSize:12, fontWeight:800, cursor:"pointer",
+            fontFamily:"inherit", letterSpacing:"0.04em", transition:"all 0.2s"
+          }}>{d.label}</button>
+        ))}
+      </div>
+      <div style={{ padding:"14px 16px" }}>
+        {day.rest && <RestDay tips={day.restTips}/>}
+        {day.hiit && <HiitDay day={day}/>}
+        {day.exercises && <ExerciseList key={dayIdx} dayId={dayIdx} exercises={day.exercises}/>}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+</body>
+</html>
